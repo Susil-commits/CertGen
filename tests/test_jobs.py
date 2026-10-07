@@ -242,3 +242,13 @@ async def test_job_with_duplicate_recipients(client: AsyncClient) -> None:
     assert records[0]["status"] == "SUCCESS"
     assert records[1]["status"] == "SUCCESS"
     assert records[0]["file_path"] != records[1]["file_path"]
+
+
+@pytest.mark.asyncio
+async def test_minimal_frontend_served(client: AsyncClient) -> None:
+    """Test that the minimal frontend UI is accessible at /ui."""
+    res = await client.get("/ui")
+    assert res.status_code == 200
+    assert "text/html" in res.headers["content-type"]
+    assert "Bulk" in res.text
+    assert "Certificate" in res.text

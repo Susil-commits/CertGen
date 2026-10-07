@@ -1,11 +1,17 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routers import certificates, jobs
 from app.utils.logging import setup_logging
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -33,6 +39,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static asset directory
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 @app.get("/", tags=["Root"])
 def read_root() -> dict[str, str]:
@@ -42,7 +52,14 @@ def read_root() -> dict[str, str]:
         "version": "1.0.0",
         "status": "operational",
         "docs_url": "/docs",
+        "ui_url": "/ui",
     }
+
+
+@app.get("/ui", tags=["Frontend"], include_in_schema=False)
+def get_ui() -> FileResponse:
+    """Serve the minimal certificate generation web interface."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health", tags=["Health"])
