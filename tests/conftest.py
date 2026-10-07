@@ -44,9 +44,15 @@ def setup_test_environment() -> Generator[None, None, None]:
 @pytest.fixture(autouse=True)
 def setup_test_db() -> Generator[None, None, None]:
     """Create fresh tables before every test and drop them after."""
+    import app.workers.tasks
+
+    orig_factory = app.workers.tasks.SessionLocal
+    app.workers.tasks.SessionLocal = TestingSessionLocal
+
     Base.metadata.create_all(bind=test_engine)
     yield
     Base.metadata.drop_all(bind=test_engine)
+    app.workers.tasks.SessionLocal = orig_factory
 
 
 @pytest.fixture
