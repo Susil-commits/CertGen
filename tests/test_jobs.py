@@ -110,3 +110,81 @@ async def test_certificate_generation_partial_failure(
         assert rec.error_message is None
         assert rec.file_path is not None
         assert Path(rec.file_path).exists()
+
+
+@pytest.mark.asyncio
+async def test_job_status_transitions(client: AsyncClient) -> None:
+    """Test retrieving job status and records via GET endpoints, verifying transitions and 404s."""
+    payload = {
+        "recipients": [
+            {"name": "Claude Shannon", "email": "shannon@bell-labs.com"},
+            {"name": "John von Neumann", "email": "vonneumann@ias.edu"},
+        ]
+    }
+
+    # 1. Create Job
+    post_res = await client.post("/api/jobs/", json=payload)
+    assert post_res.status_code == 202
+    job_id = post_res.json()["job_id"]
+
+    # 2. Get Job Status
+    get_job_res = await client.get(f"/api/jobs/{job_id}/")
+    assert get_job_res.status_code == 200
+    job_data = get_job_res.json()
+    assert job_data["job_id"] == job_id
+    assert job_data["status"] == "COMPLETED"
+    assert job_data["total_count"] == 2
+    assert job_data["success_count"] == 2
+    assert job_data["failure_count"] == 0
+    assert "created_at" in job_data
+    assert "updated_at" in job_data
+
+    # 3. Get Job Records
+    records_res = await client.get(f"/api/jobs/{job_id}/records/")
+    assert records_res.status_code == 200
+    records_data = records_res.json()
+    assert len(records_data) == 2
+    for item in records_data:
+        assert "record_id" in item
+        assert item["status"] == "SUCCESS"
+        assert item["recipient_name"] in ["Claude Shannon", "John von Neumann"]
+        assert item["file_path"] is not None
+
+    # 4. Check 404 for unknown job ID
+    unknown_job_id = uuid.uuid4()
+    not_found_job = await client.get(f"/api/jobs/{unknown_job_id}/")
+    assert not_found_job.status_code == 404
+    assert "not found" in not_found_job.json()["detail"].lower()
+
+    not_found_records = await client.get(f"/api/jobs/{unknown_job_id}/records/")
+    assert not_found_records.status_code == 404
+    assert "not found" in not_found_records.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_download_generated_certificate(client: AsyncClient) -> None:
+    """Test downloading a successfully generated certificate file and handling not-found cases."""
+    payload = {
+        "recipients": [
+            {"name": "Tim Berners-Lee", "email": "timbl@w3.org"},
+        ]
+    }
+
+    post_res = await client.post("/api/jobs/", json=payload)
+    assert post_res.status_code == 202
+    job_id = post_res.json()["job_id"]
+
+    records_res = await client.get(f"/api/jobs/{job_id}/records/")
+    assert records_res.status_code == 200
+    record_id = records_res.json()[0]["record_id"]
+
+    # Download certificate
+    download_res = await client.get(f"/api/certificates/{record_id}/download/")
+    assert download_res.status_code == 200
+    assert download_res.headers["content-type"] in ["application/pdf", "image/png"]
+    assert len(download_res.content) > 0
+
+    # Test downloading non-existent record
+    unknown_record_id = uuid.uuid4()
+    missing_res = await client.get(f"/api/certificates/{unknown_record_id}/download/")
+    assert missing_res.status_code == 404

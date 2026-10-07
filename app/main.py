@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import jobs
+from app.routers import certificates, jobs
 
 
 @asynccontextmanager
@@ -51,3 +51,4 @@ def health_check() -> dict[str, str]:
 
 # Register Routers
 app.include_router(jobs.router)
+app.include_router(certificates.router)

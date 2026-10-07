@@ -6,9 +6,16 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image, ImageDraw, ImageFont
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.utils.exceptions import CertificateGenerationError
+from app.models.certificate import CertificateRecord, CertificateStatus
+from app.utils.exceptions import (
+    CertificateFileNotReadyError,
+    CertificateGenerationError,
+    CertificateRecordNotFoundError,
+)
 
 # Set up Jinja2 environment pointing to app/templates
 TEMPLATES_DIR = settings.BASE_DIR / "app" / "templates"
@@ -200,3 +207,35 @@ def generate_certificate(
         if isinstance(exc, CertificateGenerationError):
             raise
         raise CertificateGenerationError(f"Failed to generate certificate image for '{clean_name}': {exc}") from exc
+
+
+def get_certificate_record(db: Session, record_id: uuid.UUID) -> CertificateRecord:
+    """Retrieve a CertificateRecord by its primary key UUID.
+
+    Raises CertificateRecordNotFoundError if record does not exist.
+    """
+    stmt = select(CertificateRecord).where(CertificateRecord.id == record_id)
+    record = db.execute(stmt).scalar_one_or_none()
+    if not record:
+        raise CertificateRecordNotFoundError(f"Certificate record with ID '{record_id}' not found.")
+    return record
+
+
+def get_certificate_file_path(db: Session, record_id: uuid.UUID) -> Path:
+    """Validate and return the Path to the generated certificate file.
+
+    Raises CertificateRecordNotFoundError if record or file missing,
+    or CertificateFileNotReadyError if still pending or failed.
+    """
+    record = get_certificate_record(db, record_id)
+    if record.status != CertificateStatus.SUCCESS or not record.file_path:
+        raise CertificateFileNotReadyError(
+            f"Certificate for record '{record_id}' is not ready (status: {record.status.value})."
+        )
+
+    file_path = Path(record.file_path)
+    if not file_path.exists():
+        raise CertificateRecordNotFoundError(
+            f"Certificate file for record '{record_id}' was not found on disk."
+        )
+    return file_path
