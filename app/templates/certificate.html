@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Achievement - {{ recipient_name }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: #0f172a;
+            color: #1e293b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .certificate-container {
+            width: 1000px;
+            height: 700px;
+            background: #ffffff;
+            border: 12px double #b45309;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            padding: 60px 80px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .header .title {
+            font-size: 42px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #b45309;
+            font-weight: 700;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-top: 8px;
+        }
+        .content {
+            margin: 30px 0;
+        }
+        .presented-to {
+            font-size: 18px;
+            font-style: italic;
+            color: #475569;
+        }
+        .recipient-name {
+            font-size: 48px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 15px 0;
+            border-bottom: 2px solid #e2e8f0;
+            display: inline-block;
+            padding: 0 40px 10px 40px;
+        }
+        .description {
+            font-size: 18px;
+            color: #334155;
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 15px auto 0 auto;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 30px;
+        }
+        .signature-block {
+            text-align: center;
+        }
+        .signature-line {
+            width: 200px;
+            border-bottom: 1px solid #94a3b8;
+            margin-bottom: 8px;
+        }
+        .signature-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 1px;
+        }
+        .meta-info {
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: center;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate-container">
+        <div class="header">
+            <h1 class="title">Certificate of Achievement</h1>
+            <p class="subtitle">Presented for Outstanding Completion</p>
+        </div>
+        <div class="content">
+            <p class="presented-to">This is proudly presented to</p>
+            <h2 class="recipient-name">{{ recipient_name }}</h2>
+            <p class="description">
+                {{ description | default("For successful participation and exemplary performance in the program.") }}
+            </p>
+        </div>
+        <div class="footer">
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <p class="signature-title">Authorized Signatory</p>
+            </div>
+            <div class="meta-info">
+                <p>Issue Date: {{ issue_date }}</p>
+                <p>Certificate ID: {{ record_id }}</p>
+            </div>
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <p class="signature-title">Program Director</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
