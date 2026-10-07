@@ -62,3 +62,8 @@ class Job(Base):
         cascade="all, delete-orphan",
         order_by="CertificateRecord.created_at",
     )
+
+    @property
+    def job_id(self) -> uuid.UUID:
+        """Alias id as job_id for API response consistency."""
+        return self.id

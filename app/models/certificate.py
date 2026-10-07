@@ -59,3 +59,8 @@ class CertificateRecord(Base):
         "Job",
         back_populates="records",
     )
+
+    @property
+    def record_id(self) -> uuid.UUID:
+        """Alias id as record_id for API response consistency."""
+        return self.id
