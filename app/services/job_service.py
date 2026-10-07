@@ -1,3 +1,4 @@
+import logging
 import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,12 +8,30 @@ from app.models.job import Job, JobStatus
 from app.schemas.certificate import RecipientInput
 from app.utils.exceptions import JobNotFoundError
 
+logger = logging.getLogger(__name__)
+
 
 def create_job(db: Session, recipients: list[RecipientInput]) -> Job:
     """Create a new certificate generation Job and associated CertificateRecord rows.
 
-    All records and the parent job are initially set to PENDING status.
+    Detects duplicates and sets all records and parent job to PENDING status.
     """
+    # Check for duplicate recipient entries
+    seen_recipients = set()
+    duplicate_count = 0
+    for r in recipients:
+        key = (r.name.strip().lower(), (r.email or "").strip().lower())
+        if key in seen_recipients:
+            duplicate_count += 1
+        seen_recipients.add(key)
+
+    if duplicate_count > 0:
+        logger.warning(
+            "Bulk job contains %d duplicate recipient entry/entries; generating distinct records for each.",
+            duplicate_count,
+            extra={"duplicate_count": duplicate_count},
+        )
+
     job = Job(
         status=JobStatus.PENDING,
         total_count=len(recipients),

@@ -43,8 +43,7 @@ def download_certificate_endpoint(
             detail=str(exc),
         ) from exc
     except CertificateFileNotReadyError as exc:
-        # Per spec: serves the generated file (404 if not SUCCESS)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc

@@ -228,9 +228,17 @@ def get_certificate_file_path(db: Session, record_id: uuid.UUID) -> Path:
     or CertificateFileNotReadyError if still pending or failed.
     """
     record = get_certificate_record(db, record_id)
-    if record.status != CertificateStatus.SUCCESS or not record.file_path:
+    if record.status == CertificateStatus.FAILED:
         raise CertificateFileNotReadyError(
-            f"Certificate for record '{record_id}' is not ready (status: {record.status.value})."
+            f"Certificate generation failed for record '{record_id}'. Reason: {record.error_message or 'Unknown generation error'}"
+        )
+    if record.status == CertificateStatus.PENDING:
+        raise CertificateFileNotReadyError(
+            f"Certificate for record '{record_id}' is still pending generation."
+        )
+    if not record.file_path:
+        raise CertificateFileNotReadyError(
+            f"Certificate file path for record '{record_id}' is not set."
         )
 
     file_path = Path(record.file_path)

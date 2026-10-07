@@ -188,3 +188,57 @@ async def test_download_generated_certificate(client: AsyncClient) -> None:
     unknown_record_id = uuid.uuid4()
     missing_res = await client.get(f"/api/certificates/{unknown_record_id}/download/")
     assert missing_res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_download_failed_certificate_returns_409(client: AsyncClient) -> None:
+    """Test that attempting to download a FAILED certificate returns HTTP 409 with reason."""
+    payload = {
+        "recipients": [
+            {"name": "__FORCE_FAIL__", "email": "fail@example.com"},
+        ]
+    }
+
+    post_res = await client.post("/api/jobs/", json=payload)
+    assert post_res.status_code == 202
+    job_id = post_res.json()["job_id"]
+
+    records_res = await client.get(f"/api/jobs/{job_id}/records/")
+    assert records_res.status_code == 200
+    failed_record_id = records_res.json()[0]["record_id"]
+
+    download_res = await client.get(f"/api/certificates/{failed_record_id}/download/")
+    assert download_res.status_code == 409
+    detail = download_res.json()["detail"]
+    assert "failed" in detail.lower()
+    assert "simulated generation error" in detail.lower()
+
+
+@pytest.mark.asyncio
+async def test_job_with_duplicate_recipients(client: AsyncClient) -> None:
+    """Test that duplicate recipients in a batch each receive isolated, distinct records and certificates."""
+    payload = {
+        "recipients": [
+            {"name": "Marie Curie", "email": "marie@sorbonne.fr"},
+            {"name": "Marie Curie", "email": "marie@sorbonne.fr"},
+        ]
+    }
+
+    post_res = await client.post("/api/jobs/", json=payload)
+    assert post_res.status_code == 202
+    job_id = post_res.json()["job_id"]
+
+    # Verify job status
+    job_res = await client.get(f"/api/jobs/{job_id}/")
+    assert job_res.status_code == 200
+    assert job_res.json()["total_count"] == 2
+    assert job_res.json()["success_count"] == 2
+
+    # Verify both records exist with distinct record IDs
+    records_res = await client.get(f"/api/jobs/{job_id}/records/")
+    records = records_res.json()
+    assert len(records) == 2
+    assert records[0]["record_id"] != records[1]["record_id"]
+    assert records[0]["status"] == "SUCCESS"
+    assert records[1]["status"] == "SUCCESS"
+    assert records[0]["file_path"] != records[1]["file_path"]
