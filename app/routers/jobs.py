@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.job import JobCreateRequest, JobCreateResponse
 from app.services import job_service
+from app.workers.tasks import process_certificate_job
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
@@ -25,6 +26,5 @@ def create_job_endpoint(
     and enqueues background processing.
     """
     job = job_service.create_job(db=db, recipients=payload.recipients)
-
-    # Background task hook will be wired in Phase 5
+    background_tasks.add_task(process_certificate_job, job.id)
     return JobCreateResponse.model_validate(job)
