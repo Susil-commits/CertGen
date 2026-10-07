@@ -15,18 +15,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Dynamically set database URL from app settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Dynamically set database URL from app settings (escape '%' for configparser interpolation)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        version_table="alembic_version_certgen",
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -50,6 +51,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            version_table="alembic_version_certgen",
             render_as_batch=True,  # Enables batch mode for SQLite migrations
         )
 
